@@ -1,0 +1,27 @@
+Standard .gitignore for Node.js projects
+Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+Optional npm cache directory
+.npm
+Optional eslint cache
+.eslintcache
+Optional REPL history
+.node_repl_history
+Output of 'npm pack'
+*.tgz
+Yarn Integrity file
+.yarn-integrity
+dotenv environment variables file
+.env
+Production build files
+/dist
+OS generated files
+.DS_Store
+Thumbs.db
+Editor directories and files
+.idea
+.vscode
+*.swp
+*.swo

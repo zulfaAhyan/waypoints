@@ -76,7 +76,7 @@ app.get('/get-waypoints/:routeId', async (req, res) => {
 
 
 // Start the server
-const PORT = 3000;
+const PORT = process.env.PORT;
 app.listen(PORT, hostname, () => {
   console.log(`Server running on http://${hostname}:${PORT}`);
 });
