@@ -10,7 +10,7 @@ const hostname = '0.0.0.0';
 
 // CORS configuration
 const corsOptions = {
-  origin: ['http://localhost', 'https://zulfaahyan.github.io'],
+  origin: ['http://localhost', 'https://zulfaahyan.github.io', 'https://zulfaahyan.forgottengaze.africa/'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
   credentials: true,
