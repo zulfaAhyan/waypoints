@@ -2,56 +2,62 @@ import express from 'express';
 import { mkdirSync, writeFile } from 'fs';
 import { readFile } from 'fs/promises';
 import cors from 'cors';
+import path from 'path';
 
 const app = express();
-
-// For Zeet hosting
 const hostname = '0.0.0.0';
 
 // CORS configuration
 const corsOptions = {
   origin: ['http://localhost', 'https://zulfaahyan.github.io', 'https://zulfaahyan.forgottengaze.africa'],
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'X-Data-Version'],
+  allowedHeaders: ['Content-Type'],
   credentials: true,
 };
 
 app.use(cors(corsOptions));
-
-// Middleware to parse JSON bodies
 app.use(express.json());
 
-// Debugging route for the root path
+// Create waypoints directory if it doesn't exist
+const waypointsDir = path.join(process.cwd(), 'waypoints');
+mkdirSync(waypointsDir, { recursive: true });
+
 app.get('/', (req, res) => {
   res.send('Server is running');
 });
 
-// Debugging route to test CORS
 app.get('/test-cors', (req, res) => {
   res.json({ message: 'CORS is working' });
 });
 
-// Handle POST request to store waypoints
 app.post('/store-waypoints', (req, res) => {
   console.log('Received waypoints request:', req.body);
-  
   const { routeId, waypoints, metadata } = req.body;
 
-  // Validate required fields
-  if (!routeId || !Array.isArray(waypoints) || !metadata) {
-    return res.status(400).json({ error: 'Invalid request: Missing routeId, waypoints, or metadata.' });
+  // Enhanced validation
+  if (!routeId || !waypoints || !Array.isArray(waypoints)) {
+    return res.status(400).json({ error: 'Invalid request format. Required: routeId and waypoints array' });
   }
 
-  const filePath = `./waypoints/${routeId}.json`;
+  if (waypoints.length < 2) {
+    return res.status(400).json({ error: 'Route must have at least 2 waypoints' });
+  }
+
+  // Sanitize the routeId to prevent directory traversal
+  const sanitizedRouteId = routeId.replace(/[^a-zA-Z0-9-_]/g, '');
+  const filePath = path.join(waypointsDir, `${sanitizedRouteId}.json`);
+
+  // Store complete route data
+  const routeData = {
+    routeId: sanitizedRouteId,
+    waypoints,
+    metadata: {
+      ...metadata,
+      savedAt: new Date().toISOString()
+    }
+  };
 
   try {
-    // Ensure the directory exists
-    mkdirSync('./waypoints', { recursive: true });
-
-    // Combine waypoints and metadata into a single object
-    const routeData = { waypoints, metadata };
-
-    // Write the waypoints to a JSON file
     writeFile(filePath, JSON.stringify(routeData, null, 2), (err) => {
       if (err) {
         console.error('Error saving waypoints:', err);
@@ -61,9 +67,8 @@ app.post('/store-waypoints', (req, res) => {
       console.log(`Waypoints for ${routeId} stored successfully.`);
       res.status(200).json({ 
         message: 'Waypoints stored successfully.',
-        routeId,
-        metadata, 
-        filePath,
+        routeId: sanitizedRouteId,
+        totalPoints: waypoints.length
       });
     });
   } catch (error) {
@@ -72,27 +77,32 @@ app.post('/store-waypoints', (req, res) => {
   }
 });
 
-// Add a new route to get waypoints
 app.get('/get-waypoints/:routeId', async (req, res) => {
   try {
     const { routeId } = req.params;
-    const filePath = `./waypoints/${routeId}.json`;
+    const sanitizedRouteId = routeId.replace(/[^a-zA-Z0-9-_]/g, '');
+    const filePath = path.join(waypointsDir, `${sanitizedRouteId}.json`);
+    
     const data = await readFile(filePath, 'utf8');
     const routeData = JSON.parse(data);
-
-    res.json({
-      message: 'Waypoints retrieved successfully.',
-      routeId,
-      ...routeData, // Includes both waypoints and metadata
-    });
+    
+    // Verify data structure
+    if (!routeData.waypoints || !Array.isArray(routeData.waypoints)) {
+      throw new Error('Invalid data structure in stored file');
+    }
+    
+    res.json(routeData);
   } catch (error) {
     console.error('Error reading waypoints:', error);
-    res.status(404).json({ error: 'Waypoints not found' });
+    if (error.code === 'ENOENT') {
+      res.status(404).json({ error: 'Route not found' });
+    } else {
+      res.status(500).json({ error: 'Error retrieving waypoints data' });
+    }
   }
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000; // Default to 3000 for local development
-app.listen(PORT, hostname, () => {
-  console.log(`Server running on http://${hostname}:${PORT}`);
+const port = process.env.PORT || 3000;
+app.listen(port, hostname, () => {
+  console.log(`Server running on port ${port}`);
 });
