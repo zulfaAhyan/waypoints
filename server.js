@@ -11,7 +11,7 @@ const hostname = '0.0.0.0';
 const corsOptions = {
   origin: ['http://localhost', 'https://zulfaahyan.github.io', 'https://zulfaahyan.forgottengaze.africa'],
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
+  allowedHeaders: ['Content-Type', 'X-Data-Version'],
   credentials: true,
 };
 
